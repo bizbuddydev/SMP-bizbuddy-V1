@@ -295,7 +295,7 @@ def summarize_monthly_data(monthly_data, event_data):
 
 
 # Generate all metrics
-def generate_all_metrics_copy(current_summary_df, last_month_summary_df):
+def generate_all_metrics_copy(current_summary_df):
     # List of metrics and their descriptions
     metrics = {
         "Total Visitors": "the number of people that have visited your site.",
