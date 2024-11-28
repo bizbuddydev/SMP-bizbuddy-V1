@@ -292,57 +292,6 @@ def summarize_monthly_data(monthly_data, event_data):
     
     return summary_df, acquisition_summary
 
-def summarize_last_month_data(prev_monthly_data, event_data):
-    # Ensure the Date column is in datetime format, then convert to date
-    if 'Date' not in prev_monthly_data.columns:
-        raise ValueError("Data does not contain a 'Date' column.")
-    
-    prev_monthly_data['Date'] = pd.to_datetime(prev_monthly_data['Date'], errors='coerce').dt.date
-    
-    # Check if required columns are in the dataframe
-    required_cols = ["Total Visitors", "New Users", "Sessions", "Average Session Duration", "Session Source"]
-    if not all(col in prev_monthly_data.columns for col in required_cols):
-        raise ValueError("Data does not contain required columns.")
-    
-    # Convert columns to numeric, if possible, and fill NaNs
-    numeric_cols = ["Total Visitors", "New Users", "Sessions", "Average Session Duration"]
-    for col in numeric_cols:
-        prev_monthly_data[col] = pd.to_numeric(prev_monthly_data[col], errors='coerce').fillna(0)
-    
-    # Filter event data to include only "generate_lead" events
-    event_data_filtered = event_data[event_data['Event Name'] == 'generate_lead']
-
-    # Sum the "Event Count" for "generate_lead" events to get total leads
-    total_leads = event_data_filtered['Event Count'].sum()
-
-    # Add a new column "Leads" to the acquisition data and set it to 0 by default
-    prev_monthly_data['Leads'] = 0
-    
-    # Set the "Leads" column for the Contact page
-    prev_monthly_data.loc[prev_monthly_data['Session Source'] == 'Contact', 'Leads'] = total_leads
-    
-    # Calculate total metrics for the last month
-    total_visitors = prev_monthly_data["Total Visitors"].sum()
-    new_visitors = prev_monthly_data["New Users"].sum()
-    total_sessions = prev_monthly_data["Sessions"].sum()
-
-    # Calculate average metrics for the last month
-    avg_time_on_site = prev_monthly_data["Average Session Duration"].mean().round(2)
-    
-    # Create a summary DataFrame
-    summary_df = pd.DataFrame({
-        "Metric": ["Total Visitors", "New Visitors", "Total Sessions", "Total Leads", "Average Session Duration"],
-        "Value": [total_visitors, new_visitors, total_sessions, total_leads, avg_time_on_site]
-    })
-
-    # Summarize acquisition metrics (using Event Count for leads)
-    acquisition_summary = prev_monthly_data.groupby("Session Source").agg(
-        Visitors=("Total Visitors", "sum"),
-        Sessions=("Sessions", "sum"),
-        Leads=("Leads", "sum")  # Sum of leads for the Contact page
-    ).reset_index()
-    
-    return summary_df, acquisition_summary
 
 
 # Generate all metrics
@@ -364,23 +313,10 @@ def generate_all_metrics_copy(current_summary_df, last_month_summary_df):
     for metric_name, description in metrics.items():
         # Extract metric values for the current and last month
         current_value = current_summary_df.loc[current_summary_df['Metric'] == metric_name, 'Value'].values[0]
-        last_month_value = last_month_summary_df.loc[last_month_summary_df['Metric'] == metric_name, 'Value'].values[0]
         
         # For "Total Leads", make sure it only counts the leads from the Contact page
         if metric_name == "Total Leads":
             current_value = current_summary_df.loc[current_summary_df['Metric'] == "Total Leads", 'Value'].values[0]
-            last_month_value = last_month_summary_df.loc[last_month_summary_df['Metric'] == "Total Leads", 'Value'].values[0]
-
-        # Calculate the percentage change
-        if last_month_value > 0:
-            percentage_change = ((current_value - last_month_value) / last_month_value) * 100
-        else:
-            percentage_change = 0  # Avoid division by zero
-        
-        # Determine the direction of change (up or down)
-        change_direction = "up" if percentage_change > 0 else "down"
-        percentage_change = abs(percentage_change)
-        color = "green" if change_direction == "up" else "red"  # Green for positive, red for negative
         
         # Customize the metric display for "Average Session Duration"
         if metric_name == "Average Session Duration":
@@ -390,9 +326,7 @@ def generate_all_metrics_copy(current_summary_df, last_month_summary_df):
         
         # Generate the display copy for each metric
         st.markdown(
-            f"{display_metric} - _{description}_<br>"
-            f"<span style='font-size: smaller;'>This is {change_direction} "
-            f"<span style='color:{color};'>{percentage_change:.2f}%</span> from last month.</span>", 
+            f"{display_metric} - _{description}_<br>", 
             unsafe_allow_html=True
         )
 
