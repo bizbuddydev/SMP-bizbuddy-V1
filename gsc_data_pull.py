@@ -5,7 +5,7 @@ from google.oauth2 import service_account
 import streamlit as st
 
 # Define the Google Search Console property URL
-PROPERTY_URL = 'https://www.chelseawnutrition.com/'  # Replace with your actual website URL in Search Console
+PROPERTY_URL = "https://sterlingmentalperformance.com/"  # Replace with your actual website URL in Search Console
 
 # Load the service account credentials from Streamlit secrets
 credentials = service_account.Credentials.from_service_account_info(
