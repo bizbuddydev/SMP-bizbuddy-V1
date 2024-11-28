@@ -55,8 +55,6 @@ def main():
     start_date_60_days = "60daysAgo"
     end_date_30_days = "31daysAgo"
 
-    df_60_to_30_days = fetch_metrics_by_source(start_date_60_days, end_date_30_days)
-
     # Fetch event data (generate leads)
     event_data = fetch_metrics_by_event(start_date_30_days, end_date_yesterday)  # Add this line to fetch event data
 
@@ -67,16 +65,12 @@ def main():
    
     with col1:
         st.markdown("<h3 style='text-align: center;'>Web Performance Overview</h3>", unsafe_allow_html=True)
-
-        # Fetch event data (generate leads)
-        last_month_event_data = fetch_metrics_by_event(start_date_60_days, start_date_30_days)  # Add this line to fetch event data
         
         # Summarize monthly data with leads now included (for the 30 days data)
         current_summary = summarize_monthly_data(df_30_days, event_data)[0]
-        last_month_summary = summarize_last_month_data(df_60_to_30_days, last_month_event_data)[0]
        
         # Display GA4 metrics (Updated with the new leads data)
-        generate_all_metrics_copy(current_summary, last_month_summary)
+        generate_all_metrics_copy(current_summary)
         
         # LLM insights based on GA data
         ga_llm_prompt = """
