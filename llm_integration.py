@@ -2,9 +2,7 @@ from openai import OpenAI
 import streamlit as st
 
 # Initialize the OpenAI client
-#client = OpenAI(api_key=st.secrets["openai"]["api_key"])
-client = OpenAI(api_key= "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")
-
+client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
 # Business context for session memory
 business_context = """
