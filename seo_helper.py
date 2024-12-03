@@ -1,9 +1,7 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 import json
-import gsc_data_pull
 from llm_integration import query_gpt
 
 # Set up the app title
@@ -91,6 +89,8 @@ def generate_keywords(business_description):
                     st.session_state["keywords_df"]["Ad Group"]
                 )
             }  # Initialize checkbox states
+            # Return the list of generated keywords
+            return [kw for kw in st.session_state["keywords_df"]["Keyword"]]
         except json.JSONDecodeError:
             st.error("Failed to parse the extracted content as JSON. Please check the output.")
     else:
@@ -110,13 +110,6 @@ def main():
     if "session_summary" not in st.session_state:
         st.session_state["session_summary"] = ""  # Initialize with an empty string or default value
 
-    # Pull the same dataframe as in the main app
-    df = gsc_data_pull.fetch_search_console_data()  # Replace 'pull_data' with the actual function name
-    
-    # Retrieve message from URL parameter
-    query_params = st.experimental_get_query_params()
-    message = query_params.get("message", ["No message received"])[0]
-
     # Display SEO helper app
     st.title("SEO Helper")
     st.write("This is the SEO helper app.")
@@ -126,7 +119,8 @@ def main():
     
     # Step 2: Keyword Generation
     if st.button("Generate Keywords") and business_description.strip():
-        generate_keywords(business_description)
+        # Generate keywords based on the business description
+        keywords = generate_keywords(business_description)
 
     # Now generate the SEO analysis based on the business description and keywords
     if url:
@@ -149,16 +143,11 @@ def main():
             f"Meta Keywords: {seo_data['Meta Keywords']}\n"
             f"Page Copy: {seo_data['Page Copy']}\n\n"
             f"Based on this SEO information, please suggest possible improvements. Have one section main section that talks about overall SEO strategy. Below that have another section where you identify actual pieces of text you see that could be tweaked."
-            f"Use the following context to guide your suggestions: {message}. "
-            f"This is an analysis from an initial look at the search query report from this website."
+            f"Use the following context to guide your suggestions: This website's keywords are: {', '.join(keywords)}. "
         )
 
         # Display LLM analysis with the generated keywords included in the prompt
-        display_report_with_llm(llm_prompt, st.session_state["keywords_df"]['Keyword'].tolist())
+        display_report_with_llm(llm_prompt, keywords)
  
-if __name__ == "__main__":
-     main()
-
-
 if __name__ == "__main__":
      main()
