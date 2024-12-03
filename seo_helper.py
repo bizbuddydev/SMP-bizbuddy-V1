@@ -23,18 +23,11 @@ url = st.text_input("Enter a URL to scrape", placeholder="https://example.com")
 
 
 def extract_json_like_content(response):
-    """
-    Extracts the content inside the first matched brackets: [ ... ].
-    Returns the content including the brackets.
-    """
     try:
-        # Use regex to find the first occurrence of [ ... ]
-        match = re.search(r"\[.*?\]", response, re.DOTALL)
-        if match:
-            return match.group(0)  # Return the matched string, including brackets
-        else:
-            return None
-    except Exception as e:
+        # Try parsing the response directly as JSON
+        return json.loads(response)  # This will convert the JSON-like string to a Python list of dictionaries
+    except json.JSONDecodeError:
+        # If parsing fails, return None
         return None
 
 # Function to fetch the page copy for SEO
