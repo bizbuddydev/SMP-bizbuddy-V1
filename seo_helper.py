@@ -168,14 +168,6 @@ def main():
     if "session_summary" not in st.session_state:
         st.session_state["session_summary"] = ""  # Initialize with an empty string or default value
 
-    
-    # Pull the same dataframe as in the main app
-    df = gsc_data_pull.fetch_search_console_data()  # Replace 'pull_data' with the actual function name
-    
-    # Retrieve message from URL parameter
-    query_params = st.experimental_get_query_params()
-    message = query_params.get("message", ["No message received"])[0]
-
     # Display SEO helper app
     st.title("SEO Helper")
     st.write("This is the SEO helper app.")
@@ -203,12 +195,13 @@ def main():
             f"Meta Keywords: {seo_data['Meta Keywords']}\n"
             f"Page Copy: {seo_data['Page Copy']}\n\n"
             f"Based on this SEO information, please suggest possible improvements. Have one section main section that talks about overall SEO strategy. Below that have another section where you identify actual pieces of text you see that could be tweaked."
-            f"Use the following context to guide your suggestions: {message}. "
             f"This is an analysis from an initial look at the search query report from this website."
         )
 
         # Display LLM analysis
         display_report_with_llm(llm_prompt)
- 
+
+#f"Use the following context to guide your suggestions: {message}. "
+
 if __name__ == "__main__":
      main()
