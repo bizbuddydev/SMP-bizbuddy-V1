@@ -21,6 +21,22 @@ business_description = st.text_area(
 # Input field for the URL to scrape
 url = st.text_input("Enter a URL to scrape", placeholder="https://example.com")
 
+
+def extract_json_like_content(response):
+    """
+    Extracts the content inside the first matched brackets: [ ... ].
+    Returns the content including the brackets.
+    """
+    try:
+        # Use regex to find the first occurrence of [ ... ]
+        match = re.search(r"\[.*?\]", response, re.DOTALL)
+        if match:
+            return match.group(0)  # Return the matched string, including brackets
+        else:
+            return None
+    except Exception as e:
+        return None
+
 # Function to fetch the page copy for SEO
 def fetch_page_copy(url):
     try:
