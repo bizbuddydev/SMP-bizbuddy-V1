@@ -96,6 +96,7 @@ def generate_keywords(business_description):
     )
 
     # Extract content inside brackets
+    st.write(llm_response)
     extracted_json = extract_json_like_content(llm_response)
 
     if extracted_json:
