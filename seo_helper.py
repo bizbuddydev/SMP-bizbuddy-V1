@@ -1,118 +1,26 @@
-# import streamlit as st
-# import requests
-# from bs4 import BeautifulSoup
-# from urllib.parse import urljoin
-# import pandas as pd
-
-# # Function to fetch and parse a page
-# def fetch_page(url):
-#     try:
-#         response = requests.get(url, timeout=10)
-#         response.raise_for_status()
-#         soup = BeautifulSoup(response.text, 'html.parser')
-#         return soup
-#     except requests.exceptions.RequestException as e:
-#         st.error(f"Error fetching {url}: {e}")
-#         return None
-
-# # Function to extract links from a page
-# def extract_links(base_url, soup):
-#     links = set()
-#     for a_tag in soup.find_all('a', href=True):
-#         href = a_tag['href']
-#         full_url = urljoin(base_url, href)
-#         if base_url in full_url:  # Only keep internal links
-#             links.add(full_url.split('#')[0])  # Remove fragment identifiers
-#     return links
-
-# # Expanded metadata extraction
-# def extract_metadata(url, soup):
-#     title = soup.title.string if soup.title else "No Title"
-    
-#     # Meta description
-#     meta_desc = soup.find('meta', attrs={'name': 'description'})
-#     description = meta_desc['content'] if meta_desc else "No Meta Description"
-    
-#     # Canonical tag
-#     canonical_tag = soup.find('link', rel='canonical')
-#     canonical = canonical_tag['href'] if canonical_tag else "No Canonical URL"
-    
-#     # Headers (H1, H2)
-#     h1 = [h1_tag.get_text(strip=True) for h1_tag in soup.find_all('h1')]
-#     h2 = [h2_tag.get_text(strip=True) for h2_tag in soup.find_all('h2')]
-    
-#     return {
-#         "URL": url,
-#         "Title": title,
-#         "Meta Description": description,
-#         "Canonical URL": canonical,
-#         "H1 Tags": ", ".join(h1) if h1 else "No H1 Tags",
-#         "H2 Tags": ", ".join(h2) if h2 else "No H2 Tags"
-#     }
-
-# # Recursive function to crawl pages
-# def crawl_website(base_url, max_pages=10):
-#     to_crawl = set([base_url])
-#     crawled = set()
-#     results = []
-
-#     while to_crawl and len(crawled) < max_pages:
-#         url = to_crawl.pop()
-#         if url in crawled:
-#             continue
-        
-#         soup = fetch_page(url)
-#         if soup:
-#             # Extract expanded metadata and links
-#             metadata = extract_metadata(url, soup)
-#             results.append(metadata)
-#             new_links = extract_links(base_url, soup)
-#             to_crawl.update(new_links - crawled)
-
-#         crawled.add(url)
-    
-#     return results
-
-# # Streamlit UI
-# st.title("Website Audit Tool - Expanded Metadata Extraction")
-
-# base_url = st.text_input("Enter the website URL:", "https://example.com")
-# max_pages = st.slider("Max pages to crawl:", 1, 50, 10)
-
-# if st.button("Start Crawl"):
-#     if base_url:
-#         st.info(f"Crawling {base_url}...")
-#         crawl_results = crawl_website(base_url, max_pages)
-        
-#         if crawl_results:
-#             df = pd.DataFrame(crawl_results)
-#             st.write("### Crawl Results", df)
-#             st.download_button("Download CSV", df.to_csv(index=False), file_name="expanded_crawl_results.csv")
-#         else:
-#             st.warning("No data found. Please check the URL or try a different site.")
-
-
-
-
-
-
-
-
-### Old Code ####
-
-
-
-
 import streamlit as st
-from urllib.parse import unquote
-import gsc_data_pull 
 import requests
 from bs4 import BeautifulSoup
-from llm_integration import query_gpt 
+import pandas as pd
+import json
+import gsc_data_pull
+from llm_integration import query_gpt
 
-# Page configuration
-st.set_page_config(layout="wide")
+# Set up the app title
+st.title("Keyword Campaign Builder & SEO Helper")
 
+# Step 1: Collect information about the business
+st.header("Step 1: Tell us about your business")
+st.write("Please enter a short prompt about your business, specific services, and what customers might search for "
+         "if they were looking for a business like yours.")
+
+# Input field for user description
+business_description = st.text_area(
+    "Business Description", 
+    placeholder="E.g., 'A sports psychologist in Boise, Idaho, specializing in 1-on-1 coaching, team workshops, and mental performance plans. Customers might search for terms like 'sports psychologist,' 'sports mental coach,' or 'mental fatigue in athletes.'"
+)
+
+# Function to fetch the page copy for SEO
 def fetch_page_copy(url):
     try:
         # Fetch the content of the page
@@ -157,7 +65,41 @@ def fetch_page_copy(url):
     except requests.RequestException as e:
         return {"Error": f"An error occurred while fetching the page: {e}"}
 
-def display_report_with_llm(llm_prompt):
+# Function to generate keywords based on business description
+def generate_keywords(business_description):
+    llm_response = query_gpt(
+        prompt=(
+            "Generate a list of exactly 15 paid search keywords grouped into 3 ad groups based on the following business description. "
+            "Each ad group should contain 5 keywords. "
+            "Return the response as a JSON-formatted list of dictionaries, where each dictionary has the following structure: "
+            '{"Keyword": "Keyword 1", "Ad Group": "Ad Group 1"}. '
+            "Ensure that the only output is the JSON list of dictionaries with no additional text before or after."
+        ),
+        data_summary=business_description
+    )
+
+    # Extract content inside brackets
+    extracted_json = extract_json_like_content(llm_response)
+
+    if extracted_json:
+        try:
+            keyword_list = json.loads(extracted_json)  # Parse JSON
+            st.session_state["keywords_df"] = pd.DataFrame(keyword_list)  # Save DataFrame in session state
+            st.session_state["keyword_checkboxes"] = {
+                f"{kw} ({ad})": True for kw, ad in zip(
+                    st.session_state["keywords_df"]["Keyword"],
+                    st.session_state["keywords_df"]["Ad Group"]
+                )
+            }  # Initialize checkbox states
+        except json.JSONDecodeError:
+            st.error("Failed to parse the extracted content as JSON. Please check the output.")
+    else:
+        st.error("Could not extract content inside brackets. Please check the LLM response.")
+
+# Combine the SEO tool with keyword generation
+def display_report_with_llm(llm_prompt, keywords):
+    # Append keywords to the SEO prompt
+    llm_prompt += f"\n\nHere are the suggested keywords: {keywords}"
     # Query the LLM with the prompt
     llm_response = query_gpt(llm_prompt)
     st.write("GPT-4 Analysis:")
@@ -168,6 +110,13 @@ def main():
     if "session_summary" not in st.session_state:
         st.session_state["session_summary"] = ""  # Initialize with an empty string or default value
 
+    # Pull the same dataframe as in the main app
+    df = gsc_data_pull.fetch_search_console_data()  # Replace 'pull_data' with the actual function name
+    
+    # Retrieve message from URL parameter
+    query_params = st.experimental_get_query_params()
+    message = query_params.get("message", ["No message received"])[0]
+
     # Display SEO helper app
     st.title("SEO Helper")
     st.write("This is the SEO helper app.")
@@ -175,6 +124,11 @@ def main():
     # Input field for the URL to scrape
     url = st.text_input("Enter a URL to scrape", placeholder="https://example.com")
     
+    # Step 2: Keyword Generation
+    if st.button("Generate Keywords") and business_description.strip():
+        generate_keywords(business_description)
+
+    # Now generate the SEO analysis based on the business description and keywords
     if url:
         st.write("Fetching content...")
         seo_data = fetch_page_copy(url)
@@ -195,13 +149,16 @@ def main():
             f"Meta Keywords: {seo_data['Meta Keywords']}\n"
             f"Page Copy: {seo_data['Page Copy']}\n\n"
             f"Based on this SEO information, please suggest possible improvements. Have one section main section that talks about overall SEO strategy. Below that have another section where you identify actual pieces of text you see that could be tweaked."
+            f"Use the following context to guide your suggestions: {message}. "
             f"This is an analysis from an initial look at the search query report from this website."
         )
 
-        # Display LLM analysis
-        display_report_with_llm(llm_prompt)
+        # Display LLM analysis with the generated keywords included in the prompt
+        display_report_with_llm(llm_prompt, st.session_state["keywords_df"]['Keyword'].tolist())
+ 
+if __name__ == "__main__":
+     main()
 
-#f"Use the following context to guide your suggestions: {message}. "
 
 if __name__ == "__main__":
      main()
