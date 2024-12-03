@@ -114,6 +114,7 @@ def generate_keywords(business_description):
             st.error("Failed to parse the extracted content as JSON. Please check the output.")
     else:
         st.error("Could not extract content inside brackets. Please check the LLM response.")
+        st.write(extracted_json)
 
 # Combine the SEO tool with keyword generation
 def display_report_with_llm(llm_prompt, keywords):
