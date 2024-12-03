@@ -18,6 +18,9 @@ business_description = st.text_area(
     placeholder="E.g., 'A sports psychologist in Boise, Idaho, specializing in 1-on-1 coaching, team workshops, and mental performance plans. Customers might search for terms like 'sports psychologist,' 'sports mental coach,' or 'mental fatigue in athletes.'"
 )
 
+# Input field for the URL to scrape
+url = st.text_input("Enter a URL to scrape", placeholder="https://example.com")
+
 # Function to fetch the page copy for SEO
 def fetch_page_copy(url):
     try:
@@ -114,40 +117,39 @@ def main():
     st.title("SEO Helper")
     st.write("This is the SEO helper app.")
 
-    # Input field for the URL to scrape
-    url = st.text_input("Enter a URL to scrape", placeholder="https://example.com")
-    
-    # Step 2: Keyword Generation
-    if st.button("Generate Keywords") and business_description.strip():
-        # Generate keywords based on the business description
-        keywords = generate_keywords(business_description)
+    # Check if the business description and URL are filled in
+    if business_description.strip() and url.strip():
+        # Display a progress bar while generating keywords and scraping SEO data
+        with st.spinner("Generating keywords and fetching page content..."):
+            # Step 2: Keyword Generation
+            keywords = generate_keywords(business_description)
 
-    # Now generate the SEO analysis based on the business description and keywords
-    if url:
-        st.write("Fetching content...")
-        seo_data = fetch_page_copy(url)
+            # Fetch SEO data from the provided URL
+            seo_data = fetch_page_copy(url)
 
-        with st.expander("See Website Copy"):
-            st.subheader("SEO Information")
-            st.write(f"**Title:** {seo_data['Title']}")
-            st.write(f"**Meta Description:** {seo_data['Meta Description']}")
-            st.write(f"**Meta Keywords:** {seo_data['Meta Keywords']}")
-            st.subheader("Page Copy")
-            st.write(seo_data["Page Copy"])
+            with st.expander("See Website Copy"):
+                st.subheader("SEO Information")
+                st.write(f"**Title:** {seo_data['Title']}")
+                st.write(f"**Meta Description:** {seo_data['Meta Description']}")
+                st.write(f"**Meta Keywords:** {seo_data['Meta Keywords']}")
+                st.subheader("Page Copy")
+                st.write(seo_data["Page Copy"])
 
-        # Generate the prompt for LLM analysis
-        llm_prompt = (
-            f"Here is the SEO information and page copy from a webpage:\n\n"
-            f"Title: {seo_data['Title']}\n"
-            f"Meta Description: {seo_data['Meta Description']}\n"
-            f"Meta Keywords: {seo_data['Meta Keywords']}\n"
-            f"Page Copy: {seo_data['Page Copy']}\n\n"
-            f"Based on this SEO information, please suggest possible improvements. Have one section main section that talks about overall SEO strategy. Below that have another section where you identify actual pieces of text you see that could be tweaked."
-            f"Use the following context to guide your suggestions: This website's keywords are: {', '.join(keywords)}. "
-        )
+            # Generate the prompt for LLM analysis
+            llm_prompt = (
+                f"Here is the SEO information and page copy from a webpage:\n\n"
+                f"Title: {seo_data['Title']}\n"
+                f"Meta Description: {seo_data['Meta Description']}\n"
+                f"Meta Keywords: {seo_data['Meta Keywords']}\n"
+                f"Page Copy: {seo_data['Page Copy']}\n\n"
+                f"Based on this SEO information, please suggest possible improvements. Have one section main section that talks about overall SEO strategy. Below that have another section where you identify actual pieces of text you see that could be tweaked."
+                f"Use the following context to guide your suggestions: This website's keywords are: {', '.join(keywords)}. "
+            )
 
-        # Display LLM analysis with the generated keywords included in the prompt
-        display_report_with_llm(llm_prompt, keywords)
- 
+            # Display LLM analysis with the generated keywords included in the prompt
+            display_report_with_llm(llm_prompt, keywords)
+    else:
+        st.warning("Please fill in both the business description and the URL before generating keywords and fetching content.")
+
 if __name__ == "__main__":
-     main()
+    main()
