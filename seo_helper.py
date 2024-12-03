@@ -110,8 +110,6 @@ def generate_keywords(business_description):
                     st.session_state["keywords_df"]["Ad Group"]
                 )
             }  # Initialize checkbox states
-            # Return the list of generated keywords
-            return [kw for kw in st.session_state["keywords_df"]["Keyword"]]
         except json.JSONDecodeError:
             st.error("Failed to parse the extracted content as JSON. Please check the output.")
     else:
