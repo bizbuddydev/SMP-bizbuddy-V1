@@ -122,14 +122,15 @@ def main():
         sq_col1, sq_col2 = st.columns(2)
     with sq_col1:
         st.markdown("These are all the search terms that your website has shown up for in the search results. The Google search engine shows websites based on the relevance of a website's information as it relates to the search terms.")
-        search_data = fetch_search_console_data()
-        st.dataframe(search_data['Search Query'], use_container_width=True)
+        #search_data = fetch_search_console_data()
+        #st.dataframe(search_data['Search Query'], use_container_width=True)
         
     with sq_col2:
-        seo_insights = generate_seo_insights(search_data)
-        st.markdown(seo_insights)
-        encoded_message = quote(str(seo_insights))
-        seo_url = f"https://bizbuddyv1-seobuddy.streamlit.app?message={encoded_message}"
+        #seo_insights = generate_seo_insights(search_data)
+        #st.markdown(seo_insights)
+        #encoded_message = quote(str(seo_insights))
+        #seo_url = f"https://bizbuddyv1-seobuddy.streamlit.app?message={encoded_message}"
+        seo_url = f"https://smp-bizbuddyv1-seobuddy.streamlit.app/"
         st.link_button("Check Out our SEO Helper!!", seo_url)
 
 # Execute the main function only when the script is run directly
