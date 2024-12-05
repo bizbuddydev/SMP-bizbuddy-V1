@@ -1,42 +1,14 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
+import pandas as pd
 import json
+import gsc_data_pull
 from llm_integration import query_gpt
+from gaw_camapignbuilder import *
 
-# Set up the app title
-st.title("Keyword Campaign Builder & SEO Helper")
-
-# Step 1: Collect information about the business
-st.header("Step 1: Tell us about your business")
-st.write("Please enter a short prompt about your business, specific services, and what customers might search for "
-         "if they were looking for a business like yours.")
-
-# Input field for user description
-business_description = st.text_area(
-    "Business Description", 
-    placeholder="E.g., 'A sports psychologist in Boise, Idaho, specializing in 1-on-1 coaching, team workshops, and mental performance plans. Customers might search for terms like 'sports psychologist,' 'sports mental coach,' or 'mental fatigue in athletes.'"
-)
-
-# Input field for the URL to scrape
-url = st.text_input("Enter a URL to scrape", placeholder="https://example.com")
-
-
-def extract_json_like_content(response):
-    """
-    Extracts the content inside the first matched brackets: [ ... ].
-    Returns the content including the brackets.
-    """
-    try:
-        # Use regex to find the first occurrence of [ ... ]
-        match = re.search(r"\[.*?\]", response, re.DOTALL)
-        if match:
-            return match.group(0)  # Return the matched string, including brackets
-        else:
-            return None
-    except Exception as e:
-        return None
-
+# Page configuration
+st.set_page_config(page_title="SEOhelper", layout="wide", page_icon = "🔎")
 
 # Function to fetch the page copy for SEO
 def fetch_page_copy(url):
@@ -97,9 +69,7 @@ def generate_keywords(business_description):
     )
 
     # Extract content inside brackets
-    st.write(llm_response)
     extracted_json = extract_json_like_content(llm_response)
-
     if extracted_json:
         try:
             keyword_list = json.loads(extracted_json)  # Parse JSON
@@ -110,6 +80,10 @@ def generate_keywords(business_description):
                     st.session_state["keywords_df"]["Ad Group"]
                 )
             }  # Initialize checkbox states
+            
+            # Extract only the "Keyword" part
+            keywords = [kw["Keyword"] for kw in keyword_list]
+            return keywords  # Return the list of keywords
         except json.JSONDecodeError:
             st.error("Failed to parse the extracted content as JSON. Please check the output.")
     else:
@@ -117,55 +91,75 @@ def generate_keywords(business_description):
 
 # Combine the SEO tool with keyword generation
 def display_report_with_llm(llm_prompt, keywords):
-    # Append keywords to the SEO prompt
-    llm_prompt += f"\n\nHere are the suggested keywords: {keywords}"
+    # Ensure keywords are passed as a formatted string for the LLM prompt
+    keywords_str = ', '.join(keywords)  # Join keywords into a string
+
     # Query the LLM with the prompt
-    llm_response = query_gpt(llm_prompt)
-    st.write("GPT-4 Analysis:")
-    st.write(llm_response)
+    final_response = query_gpt(llm_prompt)
+    st.subheader("ChatGPT Analysis:")
+    st.write(final_response)
 
 def main():
+         
     # Ensure session_summary is initialized in session state
     if "session_summary" not in st.session_state:
         st.session_state["session_summary"] = ""  # Initialize with an empty string or default value
+    
 
     # Display SEO helper app
     st.title("SEO Helper")
     st.write("This is the SEO helper app.")
 
-    # Check if the business description and URL are filled in
-    if business_description.strip() and url.strip():
-        # Display a progress bar while generating keywords and scraping SEO data
-        with st.spinner("Generating keywords and fetching page content..."):
-            # Step 2: Keyword Generation
-            keywords = generate_keywords(business_description)
+    # Input field for the business description
+    business_description = st.text_area(
+        "Business Description", 
+        placeholder="E.g., 'A sports psychologist in Boise, Idaho, specializing in 1-on-1 coaching, team workshops, and mental performance plans. Customers might search for terms like 'sports psychologist,' 'sports mental coach,' or 'mental fatigue in athletes.'"
+    )
 
-            # Fetch SEO data from the provided URL
-            seo_data = fetch_page_copy(url)
+    # Input field for the URL to scrape
+    url = st.text_input("Enter a URL to scrape", placeholder="https://example.com")
 
-            with st.expander("See Website Copy"):
-                st.subheader("SEO Information")
-                st.write(f"**Title:** {seo_data['Title']}")
-                st.write(f"**Meta Description:** {seo_data['Meta Description']}")
-                st.write(f"**Meta Keywords:** {seo_data['Meta Keywords']}")
-                st.subheader("Page Copy")
-                st.write(seo_data["Page Copy"])
+    # Initialize keyword_list variable
+    keyword_list = []
 
-            # Generate the prompt for LLM analysis
-            llm_prompt = (
-                f"Here is the SEO information and page copy from a webpage:\n\n"
-                f"Title: {seo_data['Title']}\n"
-                f"Meta Description: {seo_data['Meta Description']}\n"
-                f"Meta Keywords: {seo_data['Meta Keywords']}\n"
-                f"Page Copy: {seo_data['Page Copy']}\n\n"
-                f"Based on this SEO information, please suggest possible improvements. Have one section main section that talks about overall SEO strategy. Below that have another section where you identify actual pieces of text you see that could be tweaked."
-                f"Use the following context to guide your suggestions: This website's keywords are: {', '.join(keywords)}. "
-            )
+    # Step 2: Keyword Generation
+    if st.button("Generate Keywords") and business_description.strip():
+        keyword_list = generate_keywords(business_description)
 
-            # Display LLM analysis with the generated keywords included in the prompt
-            display_report_with_llm(llm_prompt, keywords)
+    # Now generate the SEO analysis based on the business description and keywords
+    if url and keyword_list:
+        st.write("Fetching content...")
+        seo_data = fetch_page_copy(url)
+
+        with st.expander("See Website Copy"):
+            st.subheader("SEO Information")
+            st.write(f"**Title:** {seo_data['Title']}")
+            st.write(f"**Meta Description:** {seo_data['Meta Description']}")
+            st.write(f"**Meta Keywords:** {seo_data['Meta Keywords']}")
+            st.subheader("Page Copy")
+            st.write(seo_data["Page Copy"])
+
+        # Generate the prompt for LLM analysis
+        llm_prompt_final = (
+            f"Here is the SEO information and page copy from a webpage:\n\n"
+            f"Title: {seo_data['Title']}\n"
+            f"Meta Description: {seo_data['Meta Description']}\n"
+            f"Meta Keywords: {seo_data['Meta Keywords']}\n"
+            f"Page Copy: {seo_data['Page Copy']}\n\n"
+            f"Based on this SEO information, please suggest possible improvements. Have one section that talks about overall SEO strategy. Below that, identify actual pieces of text that could be tweaked."
+            f"Use the following context to guide your suggestions: {', '.join(keyword_list)}. "
+            f"This is an analysis from an initial look at the search query report from this website."
+        )
+
+        st.session_state["session_summary"] = "" 
+        
+        # Display LLM analysis with the generated keywords included in the prompt
+        display_report_with_llm(llm_prompt_final, keyword_list)
     else:
-        st.warning("Please fill in both the business description and the URL before generating keywords and fetching content.")
+        if not keyword_list:
+            st.warning("Please generate keywords by filling out the business description.")
+        if not url:
+            st.warning("Please enter a valid URL.")
 
 if __name__ == "__main__":
-    main()
+     main()
